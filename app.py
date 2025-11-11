@@ -224,16 +224,21 @@ if role == "admin":
         db.close()
 
 # ---------- DATA GENERATOR ----------
+# ---------- DATA GENERATOR + AI TRAINING PREVIEW ----------
 with active_tab[-1]:
     st.subheader("🧬 Synthetic Dataset Generator")
-    st.write("Create large wearable datasets for testing & model training.")
-    n_pat = st.slider("Patients", 1, 20, 3)
+    st.write("""
+    Generate realistic wearable datasets for testing, demo, and model training simulation.
+    """)
+
+    n_pat = st.slider("Number of patients", 1, 20, 3)
     hours = st.slider("Hours per patient", 1, 72, 12)
     hz = st.slider("Sampling frequency (Hz)", 1, 10, 1)
     mode = st.selectbox("Activity mode", ["mixed", "low", "medium", "high"], index=0)
 
     if st.button("⚙️ Generate Synthetic Dataset"):
         with st.spinner("Generating data... please wait ⏳"):
+            progress = st.progress(0)
             from datetime import datetime, timedelta
             os.makedirs("data", exist_ok=True)
 
@@ -260,15 +265,65 @@ with active_tab[-1]:
                     "accel_z":accel_z,"emg":emg,"spo2":spo2,"hr":hr,"step_count":steps})
 
             all_df=[]
-            for pid in range(1,n_pat+1):
-                lvl=np.random.choice(["low","medium","high"]) if mode=="mixed" else mode
+            for i, pid in enumerate(range(1,n_pat+1)):
+                lvl = np.random.choice(["low","medium","high"]) if mode=="mixed" else mode
                 all_df.append(gen_one(pid,hours,hz,lvl))
-            df=pd.concat(all_df,ignore_index=True)
-            filename=f"data/generated_{n_pat}p_{hours}h_{hz}hz.csv"
-            df.to_csv(filename,index=False)
+                progress.progress((i+1)/n_pat)
+            df = pd.concat(all_df, ignore_index=True)
+
+            filename = f"data/generated_{n_pat}p_{hours}h_{hz}hz.csv"
+            df.to_csv(filename, index=False)
             st.success(f"✅ Dataset ready: {filename}")
             st.metric("Rows generated", len(df))
             st.download_button("⬇️ Download CSV",
                                data=df.to_csv(index=False).encode("utf-8"),
                                file_name="synthetic_dataset.csv",
                                mime="text/csv")
+
+    # ---------- AI TRAINING SIMULATION ----------
+    st.markdown("### 🧠 AI Model Training Simulation")
+    st.caption("Visual simulation of the Digital Twin model learning from generated data.")
+
+    if st.button("🚀 Simulate Training"):
+        st.info("Initializing AI training engine (simulation mode)...")
+
+        # Fake epoch training
+        epochs = 20
+        accuracies = []
+        progress = st.progress(0)
+        chart_area = st.empty()
+
+        for epoch in range(1, epochs + 1):
+            # Simulate accuracy curve with small random noise
+            acc = 60 + 40 * (1 - np.exp(-epoch / 6)) + np.random.normal(0, 1.5)
+            accuracies.append(acc)
+            progress.progress(epoch / epochs)
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=list(range(1, len(accuracies) + 1)),
+                y=accuracies,
+                mode="lines+markers",
+                name="Training Accuracy (%)",
+                line=dict(color="#4CAF50", width=3)
+            ))
+            fig.update_layout(
+                title=f"Epoch {epoch}/{epochs} — Model Accuracy: {acc:.2f}%",
+                xaxis_title="Epoch",
+                yaxis_title="Accuracy (%)",
+                yaxis=dict(range=[50, 100]),
+                height=350
+            )
+            chart_area.plotly_chart(fig, use_container_width=True)
+            st.sleep(0.25)
+
+        st.success("🎉 Model training simulation complete!")
+        st.metric("Final Accuracy", f"{accuracies[-1]:.2f} %")
+        st.metric("Training Duration", "≈ 5 seconds (simulated)")
+
+        st.markdown("""
+        ✅ **Simulation Summary:**
+        - Model adapted using multi-patient dataset  
+        - Personalized physiological signals learned  
+        - Optimized recovery trajectory predicted  
+        - Shows future capability for real-time AI twin learning
+        """)
